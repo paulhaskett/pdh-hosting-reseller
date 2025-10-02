@@ -1,0 +1,71 @@
+<?php
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+class Enom_API
+{
+    private $username;
+    private $password;
+    private $endpoint;
+
+    public function __construct($username, $password, $endpoint = 'https://resellertest.enom.com/interface.asp')
+    {
+        $this->username = $username;
+        $this->password = $password;
+        $this->endpoint = $endpoint;
+    }
+
+    private function request($command, $args = [], $expect_json = false)
+    {
+        $params = array_merge([
+            'uid'     => $this->username,
+            'pw'      => $this->password,
+            'command' => $command,
+            // Only request JSON if explicitly told
+            'ResponseType' => $expect_json ? 'JSON' : 'XML',
+        ], $args);
+
+        $url = add_query_arg($params, $this->endpoint);
+
+        $response = wp_remote_get($url, [
+            'timeout' => 30,
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('Enom API error: ' . $response->get_error_message());
+        }
+
+        $body = wp_remote_retrieve_body($response);
+
+        if ($expect_json) {
+            return json_decode($body, true);
+        }
+
+        // Parse XML into array
+        $xml = simplexml_load_string($body, 'SimpleXMLElement', LIBXML_NOCDATA);
+        if ($xml === false) {
+            throw new Exception('Invalid XML response from Enom');
+        }
+
+        return json_decode(json_encode($xml), true);
+    }
+
+    public function register_domain($domain, $tld, $years = 1)
+    {
+        return $this->request('Purchase', [
+            'SLD'      => $domain,
+            'TLD'      => $tld,
+            'NumYears' => $years,
+        ]);
+    }
+
+    public function check_domain($domain, $tld)
+    {
+        return $this->request('check', [
+            'SLD' => $domain,
+            'TLD' => $tld,
+        ]);
+    }
+}

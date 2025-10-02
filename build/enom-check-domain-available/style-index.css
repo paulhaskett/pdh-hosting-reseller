@@ -1,0 +1,48 @@
+/*!*******************************************************************************************************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[4].use[1]!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[4].use[2]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[4].use[3]!./src/enom-check-domain-available/style.scss ***!
+  \*******************************************************************************************************************************************************************************************************************************************************************/
+/**
+ * The following styles get applied both on the front of your site
+ * and in the editor.
+ *
+ * Replace them with your own styles or remove the file completely.
+ */
+.wp-block-pdh-hosting-reseller-enom-check-domain-available {
+  padding: 5px;
+}
+
+.domain-search {
+  align-items: center;
+  padding: 10px;
+}
+.domain-search form.domain-search-form {
+  border: 2px solid #4c2639;
+  padding: 15px;
+  border-radius: 10px;
+  line-height: 1.6em;
+  font-size: 1.5em;
+  align-content: center;
+  align-items: center;
+}
+.domain-search form.domain-search-form input {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  box-sizing: border-box;
+  border: 3px solid #ccc;
+  border-radius: 20px;
+  transition: 0.5s;
+  outline: none;
+}
+.domain-search form.domain-search-form input:focus {
+  border: 3px solid #555;
+}
+.domain-search form.domain-search-form button {
+  margin: 10px;
+  background-color: grey;
+}
+.domain-search form.domain-search-form button:hover {
+  background-color: black;
+}
+
+/*# sourceMappingURL=style-index.css.map*/

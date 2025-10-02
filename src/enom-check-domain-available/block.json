@@ -1,0 +1,38 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "pdh-hosting-reseller/enom-check-domain-available",
+	"version": "0.1.0",
+	"title": "Check domain availability",
+	"category": "widgets",
+	"icon": "search",
+	"description": "displays a check domain available on the front end",
+	"example": {},
+	"supports": {
+		"html": false
+	},
+	"textdomain": "pdh-hosting-reseller",
+	"editorScript": "file:./index.js",
+	"editorStyle": "file:./index.css",
+	"style": "file:./style-index.css",
+	"render": "file:./render.php",
+	"viewScript": "file:./view.js",
+	"attributes": {
+		"placeholder": {
+			"type": "string",
+			"default": "Search a domain name"
+		},
+		"domain": {
+			"type": "string",
+			"default": "example.com"
+		},
+		"tld": {
+			"type": "array",
+			"default": [
+				".com",
+				".net",
+				".org"
+			]
+		}
+	}
+}
