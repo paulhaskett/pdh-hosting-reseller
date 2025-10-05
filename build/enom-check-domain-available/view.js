@@ -46,7 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const tldSelect = form.querySelector('select[name="tld"]');
       const domain = domainInput.value.trim();
       const tld = tldSelect.value;
-      if (!domain) return;
+      const domain_name = document.getElementById('domain_name');
+      if (!domain) return resultDiv.textContent = "Please enter a valid domain";
       resultDiv.textContent = 'Checking…';
       try {
         const response = await fetch('/wp-json/pdh-enom/v2/check-domain', {
@@ -61,7 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
           })
         });
         const data = await response.json();
-        const result = data['interface-response'];
+        const result = data;
+        console.log('result', result);
         if (result.RRPText === 'Domain not available') {
           available = false;
         } else {
@@ -69,7 +71,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         console.log(result.RRPText);
         console.log(available);
-        resultDiv.textContent = available ? `✅ Domain ${domain}.${tld} is available!` : `❌ Domain ${domain}.${tld} is taken.`;
+        if (available) {
+          resultDiv.textContent = `✅ Domain ${result.DomainName} is available! `;
+          //check if the product domain name field exists if not ask if user wants to register domain and forward them to the domain single product page
+
+          if (domain_name) {
+            // add the domain name to product field
+
+            domain_name.value = result.DomainName;
+          } else {
+            const button = document.createElement('a');
+            button.textContent = 'Configure Domain Registration';
+            button.href = '/product/domain-registration/?domain_name=' + encodeURIComponent(result.DomainName);
+            button.className = 'wp-element-button configure-domain-btn';
+            const buttonContainer = document.createElement('div');
+            buttonContainer.appendChild(button);
+            resultDiv.appendChild(buttonContainer);
+          }
+        } else {
+          resultDiv.textContent = `❌ Domain ${result.DomainName} is taken.`;
+          if (domain_name) {
+            domain_name.value = '';
+          }
+        }
       } catch (err) {
         resultDiv.textContent = 'Error checking domain.';
       }

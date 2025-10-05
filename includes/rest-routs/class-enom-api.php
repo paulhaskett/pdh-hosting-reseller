@@ -4,17 +4,17 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-class Enom_API
+class PDH_Enom_API
 {
     private $username;
     private $password;
     private $endpoint;
 
-    public function __construct($username, $password, $endpoint = 'https://resellertest.enom.com/interface.asp')
+    public function __construct()
     {
-        $this->username = $username;
-        $this->password = $password;
-        $this->endpoint = $endpoint;
+        $this->username = ENOM_USERNAME;
+        $this->password = ENOM_API_KEY;
+        $this->endpoint = ENOM_URL;
     }
 
     private function request($command, $args = [], $expect_json = false)
@@ -67,5 +67,16 @@ class Enom_API
             'SLD' => $domain,
             'TLD' => $tld,
         ]);
+    }
+
+    public function get_tld_list()
+    {
+        return $this->request('gettldlist', []);
+    }
+
+
+    public function test()
+    {
+        return [1, 2, 3, 4];
     }
 }

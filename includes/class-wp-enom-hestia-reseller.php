@@ -7,9 +7,7 @@ if (!defined('ABSPATH')) {
 class WP_Enom_Hestia_Reseller
 {
 
-    private $enom_api_key;
-    private $hestia_api_key;
-    private $hestia_url;
+
 
     public function __construct()
     {
@@ -27,7 +25,7 @@ class WP_Enom_Hestia_Reseller
             if (!is_singular('product')) return;
             global $product;
             if (!$product || $product->get_type() !== 'domain') return;
-            // Override the default display with your domain widget
+            // Override the default display with domain widget
             remove_action('woocommerce_single_product_summary', 'woocommerce_template_single_title', 5);
             remove_action('woocommerce_single_product_summary', 'woocommerce_template_single_price', 10);
             remove_action('woocommerce_single_product_summary', 'woocommerce_template_single_add_to_cart', 30);
@@ -38,18 +36,12 @@ class WP_Enom_Hestia_Reseller
 
         // Load custom WC_Product class after WooCommerce loads
         add_action('plugins_loaded', function () {
-            if (class_exists('WC_Product_Domain')) {
+            if (!class_exists('WC_Product_Domain')) {
                 require_once plugin_dir_path(__FILE__) . './class-wc-product-domain.php';
             }
         });
 
-        // Ensure WooCommerce uses our custom class for 'domain' products
-        add_filter('woocommerce_product_class', function ($classname, $product_type) {
-            if ($product_type === 'domain') {
-                $classname = 'WC_Product_Domain';
-            }
-            return $classname;
-        }, 10, 2);
+
 
 
 
@@ -66,25 +58,9 @@ class WP_Enom_Hestia_Reseller
         }, 30);
 
         //add_filter('woocommerce_locate_template', [$this, 'load_plugin_templates'], 10, 3);
-        //add_action('enqueue_block_assets', [$this, 'enqueue_frontend_scripts']);
-    }
-    // public function enqueue_frontend_scripts()
-    // {
-    //     $handle = 'pdh-hosting-reseller-enom-check-domain-available-view-script-js'; // match HTML
 
-    //     if (wp_script_is($handle, 'registered')) {
-    //         wp_add_inline_script(
-    //             $handle,
-    //             'const DomainWidget = ' . wp_json_encode([
-    //                 'restUrl' => esc_url(rest_url('pdh-enom/v2/check-domain')),
-    //                 'token'   => wp_create_nonce('wp_rest'),
-    //             ]) . ';',
-    //             'before'
-    //         );
-    //     } else {
-    //         var_dump("handle not registered");
-    //     }
-    // }
+    }
+
 
 
 
@@ -154,12 +130,19 @@ class WP_Enom_Hestia_Reseller
      * ------------------------- */
     public function register_product_type()
     {
+        require_once plugin_dir_path(__FILE__) . 'class-wc-product-domain.php';
         // Add 'Domain' type to product selector
         add_filter('product_type_selector', function ($types) {
             $types['domain'] = __('Domain', 'wp-enom-hestia-reseller');
             return $types;
         });
-
+        // Ensure WooCommerce uses custom class for 'domain' products
+        add_filter('woocommerce_product_class', function ($classname, $product_type) {
+            if ($product_type === 'domain') {
+                $classname = 'WC_Product_Domain';
+            }
+            return $classname;
+        }, 10, 2);
 
 
         // Add custom product fields (general data tab)

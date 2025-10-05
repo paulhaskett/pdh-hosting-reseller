@@ -21,13 +21,21 @@ if (!defined('ABSPATH')) {
 // });
 
 
+//require_once plugin_dir_path(__FILE__) . './class-enom-api.php';
+if (!class_exists('PDH_Enom_API')) {
+    require_once plugin_dir_path(__FILE__) . './class-enom-api.php';
+}
 
 function test_callback()
 {
-    return [1, 2, 3, 4, 5];
+
+    $enom = new PDH_Enom_API();
+    $response = $enom->test();
+    return rest_ensure_response($response);
 }
 function check_domain_callback(WP_REST_REQUEST $request)
 {
+
     $params = $request->get_json_params();
     $sld = sanitize_text_field($params['domain'] ?? '');
     $tld = sanitize_text_field($params['tld'] ?? '');
@@ -45,13 +53,19 @@ function check_domain_callback(WP_REST_REQUEST $request)
 
 
     try {
-        // Replace with real reseller credentials
-        $enom = new Enom_API(
-            ENOM_USERNAME,
-            ENOM_API_KEY,
-            'https://resellertest.enom.com/interface.asp'
-        );
+        $enom = new PDH_Enom_API();
         $response = $enom->check_domain($sld, $tld);
+        return rest_ensure_response($response);
+    } catch (Exception $e) {
+        return new WP_Error('enom_error', $e->getMessage(), ['status' => 500]);
+    }
+}
+function get_tld_list_callback()
+{
+
+    try {
+        $enom = new PDH_Enom_API();
+        $response = $enom->get_tld_list();
         return rest_ensure_response($response);
     } catch (Exception $e) {
         return new WP_Error('enom_error', $e->getMessage(), ['status' => 500]);

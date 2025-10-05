@@ -2,7 +2,7 @@
 
 /**
  * Plugin Name:       Pdh Hosting Reseller
- * Description:       Example block scaffolded with Create Block tool.
+ * Description:       Enom Hestiacp Reseller
  * Version:           0.1.0
  * Requires at least: 6.7
  * Requires PHP:      7.4
@@ -10,6 +10,7 @@
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       pdh-hosting-reseller
+ * Requires Plugins:  woocommerce
  *
  * @package PdhHostingReseller
  */
@@ -61,17 +62,30 @@ function pdh_hosting_reseller_pdh_hosting_reseller_block_init()
 
 
 
-	// Load main plugin class
+	// // Load main plugin class
+	// require_once plugin_dir_path(__FILE__) . 'includes/class-wp-enom-hestia-reseller.php';
+
+	// // Load frontend domain fields
+	// require_once plugin_dir_path(__FILE__) . 'includes/domain-fields.php';
+	// // Load API classes
+	// //require_once plugin_dir_path(__FILE__) . 'includes/rest-routs/class-enom-api.php';
+	// require_once plugin_dir_path(__FILE__) . 'includes/class-hestiacp-api.php';
+
+
+
+}
+add_action('init', 'pdh_hosting_reseller_pdh_hosting_reseller_block_init');
+
+add_action('plugins_loaded', function () {
+	if (!class_exists('WooCommerce')) {
+		return;
+	}
+
 	require_once plugin_dir_path(__FILE__) . 'includes/class-wp-enom-hestia-reseller.php';
 
-	// Load frontend domain fields
 	require_once plugin_dir_path(__FILE__) . 'includes/domain-fields.php';
-	// Load API classes
-	require_once plugin_dir_path(__FILE__) . 'includes/class-enom-api.php';
 	require_once plugin_dir_path(__FILE__) . 'includes/class-hestiacp-api.php';
 
-
-	// 3. Add localized data for your view script
 	add_action('enqueue_block_assets', function () {
 		$handle = 'pdh-hosting-reseller-enom-check-domain-available-view-script-js';
 		if (wp_script_is($handle, 'registered')) {
@@ -86,26 +100,8 @@ function pdh_hosting_reseller_pdh_hosting_reseller_block_init()
 		}
 	});
 
-
-
-	// Load custom WC product class after WooCommerce is loaded
-	add_action('plugins_loaded', function () {
-		if (class_exists('WC_Product_Simple')) {
-			require_once plugin_dir_path(__FILE__) . 'includes/class-wc-product-domain.php';
-		}
-	});
-
-
-
-
-
-
-	// Initialize main plugin
 	new WP_Enom_Hestia_Reseller();
-}
-add_action('init', 'pdh_hosting_reseller_pdh_hosting_reseller_block_init');
-
-
+});
 
 // Load the REST routes
 require_once plugin_dir_path(__FILE__) . 'includes/rest-routs/rest-enom.php';
@@ -133,6 +129,17 @@ add_action('rest_api_init', function () {
 
 		]
 	);
+	register_rest_route(
+		'pdh-enom/v2',
+		'/get-tld-list',
+		[
+			'methods' => 'GET',
+			'callback' => 'get_tld_list_callback',
+			'permission_callback' => '__return_true',
+
+
+		]
+	);
 });
 
 add_action('wp_footer', function () {
@@ -143,5 +150,51 @@ add_action('wp_footer', function () {
 			token: '<?php echo wp_create_nonce('wp_rest'); ?>'
 		};
 	</script>
-<?php
+	<?php
+
+	if (is_product()) : ?>
+		<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				const params = new URLSearchParams(window.location.search);
+				const domain = params.get('domain_name');
+				if (domain) {
+					const input = document.getElementById('domain_name');
+					if (input) {
+						input.value = domain;
+					}
+				}
+			});
+		</script>
+<?php endif;
 });
+
+register_activation_hook(__FILE__, 'pdh_schedule_domain_product_creation');
+
+function pdh_schedule_domain_product_creation()
+{
+	update_option('pdh_create_domain_product', true);
+}
+
+add_action('plugins_loaded', function () {
+	if (get_option('pdh_create_domain_product')) {
+		if (class_exists('WC_Product_Simple')) {
+			require_once plugin_dir_path(__FILE__) . 'includes/class-wc-product-domain.php';
+			pdh_create_domain_product();
+			delete_option('pdh_create_domain_product');
+		}
+	}
+});
+
+function pdh_create_domain_product()
+{
+	$existing = get_page_by_path('register-domain', OBJECT, 'product');
+	if ($existing) {
+		return;
+	}
+
+	$product = new WC_Product_Domain();
+	$product->set_name('Register Domain');
+	$product->set_slug('register-domain');
+	$product->set_status('publish');
+	$product->save();
+}
