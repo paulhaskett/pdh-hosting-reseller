@@ -61,11 +61,13 @@ class PDH_Enom_API
         ]);
     }
 
-    public function check_domain($domain, $tld)
+    public function check_domain($domain, $tld, $includePrice = 1)
     {
         return $this->request('check', [
             'SLD' => $domain,
             'TLD' => $tld,
+            'version' => '2',
+            'includeprice' => $includePrice
         ]);
     }
 
@@ -74,7 +76,13 @@ class PDH_Enom_API
         return $this->request('gettldlist', []);
     }
 
+    public function get_name_suggestions($searchterm = 'example.com')
+    {
+        return $this->request('getnamesuggestions', [
+            'searchterm' => $searchterm,
 
+        ]);
+    }
     public function test()
     {
         return [1, 2, 3, 4];

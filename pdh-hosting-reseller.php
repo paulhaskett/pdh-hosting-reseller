@@ -131,6 +131,17 @@ add_action('rest_api_init', function () {
 	);
 	register_rest_route(
 		'pdh-enom/v2',
+		'/get-name-suggestions',
+		[
+			'methods' => 'POST',
+			'callback' => 'get_name_suggestions_callback',
+			'permission_callback' => '__return_true',
+
+
+		]
+	);
+	register_rest_route(
+		'pdh-enom/v2',
 		'/get-tld-list',
 		[
 			'methods' => 'GET',
@@ -168,33 +179,109 @@ add_action('wp_footer', function () {
 <?php endif;
 });
 
-register_activation_hook(__FILE__, 'pdh_schedule_domain_product_creation');
 
+// schedule creation on plugin activation
+register_activation_hook(__FILE__, 'pdh_schedule_domain_product_creation');
 function pdh_schedule_domain_product_creation()
 {
+	// set a flag option so we can create the product once
 	update_option('pdh_create_domain_product', true);
 }
 
-add_action('plugins_loaded', function () {
-	if (get_option('pdh_create_domain_product')) {
-		if (class_exists('WC_Product_Simple')) {
-			require_once plugin_dir_path(__FILE__) . 'includes/class-wc-product-domain.php';
-			pdh_create_domain_product();
-			delete_option('pdh_create_domain_product');
-		}
-	}
-});
+// Attempt creation after WooCommerce and product types are registered.
+// Use a late init priority to be safe; register_product_type() usually runs on init priority 10.
+add_action('init', 'pdh_create_domain_product_if_scheduled', 100);
 
-function pdh_create_domain_product()
+function pdh_create_domain_product_if_scheduled()
 {
-	$existing = get_page_by_path('register-domain', OBJECT, 'product');
-	if ($existing) {
+	// only run once
+	if (! get_option('pdh_create_domain_product')) {
 		return;
 	}
 
-	$product = new WC_Product_Domain();
-	$product->set_name('Register Domain');
-	$product->set_slug('register-domain');
-	$product->set_status('publish');
-	$product->save();
+	// Must have WooCommerce active
+	if (! class_exists('WooCommerce')) {
+		// Keep the flag so it will retry next request
+		error_log('PDH: WooCommerce not active — delaying product creation.');
+		return;
+	}
+
+	// Ensure our custom product class file is loaded (adjust path if needed)
+	$domain_product_class_file = plugin_dir_path(__FILE__) . 'includes/class-wc-product-domain.php';
+	if (file_exists($domain_product_class_file)) {
+		require_once $domain_product_class_file;
+	}
+
+	// Wait until the product_type taxonomy exists
+	if (! taxonomy_exists('product_type')) {
+		error_log('PDH: product_type taxonomy not registered yet; delaying product creation.');
+		return;
+	}
+
+	$slug = 'register-domain';
+
+	// If product exists by slug, ensure it is assigned the domain type and has price meta
+	$existing = get_page_by_path($slug, OBJECT, 'product');
+	if ($existing) {
+		// assign product_type term 'domain' (will convert it in admin)
+		wp_set_object_terms($existing->ID, 'domain', 'product_type', false);
+
+		// ensure basic meta exists (price etc.)
+		if ('' === get_post_meta($existing->ID, '_regular_price', true)) {
+			update_post_meta($existing->ID, '_regular_price', '0.00');
+			update_post_meta($existing->ID, '_price', '0.00');
+		}
+
+		if ('' === get_post_meta($existing->ID, '_stock_status', true)) {
+			update_post_meta($existing->ID, '_stock_status', 'instock');
+		}
+
+		// remove scheduled flag
+		delete_option('pdh_create_domain_product');
+
+		// try to clear cached lookups
+		if (function_exists('wc_delete_product_transients')) {
+			wc_delete_product_transients($existing->ID);
+		}
+
+		return;
+	}
+
+	// Create a new product (post)
+	$post_id = wp_insert_post([
+		'post_title'   => 'Register Domain',
+		'post_name'    => $slug,
+		'post_type'    => 'product',
+		'post_status'  => 'publish',
+		'post_content' => 'Register a domain via Enom', // optional; you can leave empty
+	]);
+
+	if (is_wp_error($post_id) || ! $post_id) {
+		error_log('PDH: Failed to create product: ' . (is_wp_error($post_id) ? $post_id->get_error_message() : 'unknown'));
+		return;
+	}
+
+	// Set product type taxonomy to 'domain'
+	wp_set_object_terms($post_id, 'domain', 'product_type', false);
+
+	// Minimal meta so WooCommerce treats it like a product with price
+	update_post_meta($post_id, '_regular_price', '0.00');
+	update_post_meta($post_id, '_price', '0.00');
+	update_post_meta($post_id, '_stock_status', 'instock');
+	update_post_meta($post_id, '_visibility', 'visible'); // older WC versions use this
+
+	// If you want to prefill domain product custom meta:
+	update_post_meta($post_id, '_domain_default_tld', get_option('enom_default_tld', 'com'));
+	update_post_meta($post_id, '_domain_default_package', get_option('hestia_package', ''));
+
+	// Clear transients/lookup caches
+	if (function_exists('wc_delete_product_transients')) {
+		wc_delete_product_transients($post_id);
+	}
+
+	// clean up flag so we don't try again
+	delete_option('pdh_create_domain_product');
+
+	// final sanity: log created
+	error_log('PDH: Created domain product with ID ' . $post_id);
 }

@@ -71,3 +71,15 @@ function get_tld_list_callback()
         return new WP_Error('enom_error', $e->getMessage(), ['status' => 500]);
     }
 }
+function get_name_suggestions_callback(WP_REST_REQUEST $request)
+{
+    $params = $request->get_json_params();
+    $searchterm = sanitize_text_field($params['searchterm'] ?? '');
+    try {
+        $enom = new PDH_Enom_API();
+        $response = $enom->get_name_suggestions($searchterm);
+        return rest_ensure_response($response);
+    } catch (Exception $e) {
+        return new WP_Error('enom_error', $e->getMessage(), ['status' => 500]);
+    }
+}

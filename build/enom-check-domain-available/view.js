@@ -62,36 +62,69 @@ document.addEventListener('DOMContentLoaded', () => {
           })
         });
         const data = await response.json();
-        const result = data;
+        const result = data['Domains'];
         console.log('result', result);
-        if (result.RRPText === 'Domain not available') {
+        if (result.Domain.RRPText === 'Domain not available') {
           available = false;
         } else {
           available = true;
         }
-        console.log(result.RRPText);
+        console.log('RRPText', result.Domain.RRPText);
         console.log(available);
+        const prices = result.Domain.Prices;
         if (available) {
-          resultDiv.textContent = `✅ Domain ${result.DomainName} is available! `;
+          resultDiv.textContent = `✅ Domain ${result.Domain.Name} is available! £${prices.Registration} to register!`;
           //check if the product domain name field exists if not ask if user wants to register domain and forward them to the domain single product page
 
           if (domain_name) {
             // add the domain name to product field
 
-            domain_name.value = result.DomainName;
+            domain_name.value = result.Domain.Name;
           } else {
             const button = document.createElement('a');
             button.textContent = 'Configure Domain Registration';
-            button.href = '/product/domain-registration/?domain_name=' + encodeURIComponent(result.DomainName);
+            button.href = '/product/register-domain/?domain_name=' + encodeURIComponent(result.Domain.Name) + '&prices' + encodeURIComponent(result.Domain.Prices.Registration);
             button.className = 'wp-element-button configure-domain-btn';
             const buttonContainer = document.createElement('div');
             buttonContainer.appendChild(button);
             resultDiv.appendChild(buttonContainer);
           }
         } else {
-          resultDiv.textContent = `❌ Domain ${result.DomainName} is taken.`;
+          resultDiv.textContent = `❌ Domain ${result.Domain.Name} is taken.`;
           if (domain_name) {
             domain_name.value = '';
+          }
+
+          //const domainQuery = encodeURIComponent(result.Domain.Name)
+          // get suggested names
+          // get suggested names
+          try {
+            console.log('Fetching name suggestions for', result.Domain.Name);
+            const namesuggestions = await fetch('/wp-json/pdh-enom/v2/get-name-suggestions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-WP-Nonce': DomainWidget.token
+              },
+              body: JSON.stringify({
+                searchterm: result.Domain.Name
+              })
+            });
+            const data = await namesuggestions.json();
+            console.log('data response', data);
+            const suggestions = data['DomainSuggestions'] || [];
+            console.log('suggestions ', suggestions);
+            console.log('suggestions length', suggestions['Domain'].length);
+            const suggestionsDiv = document.createElement('div');
+            suggestionsDiv.className = 'domain-suggestions';
+            if (suggestions['Domain'].length > 0) {
+              suggestionsDiv.innerHTML = '<strong>Suggestions:</strong><ul>' + suggestions['Domain'].map(s => `<li>${s}</li>`).join('') + '</ul>';
+            } else {
+              suggestionsDiv.textContent = 'No alternative suggestions found.';
+            }
+            resultDiv.appendChild(suggestionsDiv);
+          } catch (err) {
+            console.error('Error fetching name suggestions', err);
           }
         }
       } catch (err) {
