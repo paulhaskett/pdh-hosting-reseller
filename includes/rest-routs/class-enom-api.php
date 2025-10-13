@@ -33,11 +33,15 @@ class PDH_Enom_API
             'timeout' => 30,
         ]);
 
+
+
         if (is_wp_error($response)) {
             throw new Exception('Enom API error: ' . $response->get_error_message());
         }
 
         $body = wp_remote_retrieve_body($response);
+
+
 
         if ($expect_json) {
             return json_decode($body, true);
@@ -48,6 +52,17 @@ class PDH_Enom_API
         if ($xml === false) {
             throw new Exception('Invalid XML response from Enom');
         }
+        // prob better to update price on add to cart
+        //$api_response = json_decode(json_encode($xml), true);
+        // if ($command === 'check') {
+        //     $product = wc_get_product_id_by_sku('register-domain');
+        //     if ($product) {
+        //         $wc_product = wc_get_product($product);
+        //         $price = floatval($api_response['Domains']['Domain']['Prices']['Registration']); // from Enom
+        //         $wc_product->set_regular_price($price);
+        //         $wc_product->save();
+        //     }
+        // }
 
         return json_decode(json_encode($xml), true);
     }
@@ -63,6 +78,7 @@ class PDH_Enom_API
 
     public function check_domain($domain, $tld, $includePrice = 1)
     {
+
         return $this->request('check', [
             'SLD' => $domain,
             'TLD' => $tld,

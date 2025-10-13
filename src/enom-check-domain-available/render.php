@@ -4,7 +4,6 @@ if (! defined('ABSPATH')) {
 }
 
 
-
 // Attributes passed from block editor
 $placeholder = !empty($attributes['placeholder'])
 	? esc_attr($attributes['placeholder'])
@@ -27,3 +26,6 @@ $placeholder = !empty($attributes['placeholder'])
 
 	</div>
 </div>
+
+
+<?php

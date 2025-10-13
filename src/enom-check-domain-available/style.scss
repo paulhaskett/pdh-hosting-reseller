@@ -56,4 +56,24 @@
 			}
 		}
 	}
+
+	.domain-suggestions ul.domain-name-suggestions {
+		list-style-type: none;
+		width: 100%;
+		padding: 0%;
+
+		li {
+			list-style: none;
+			font-size: small;
+			align-content: center;
+			text-align: center;
+
+			margin-right: 10px;
+			margin-bottom: 10px;
+			padding: 10px 15px;
+			background: #fff;
+			border: 1px solid #e0e0e0;
+			border-radius: 6px;
+		}
+	}
 }

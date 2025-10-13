@@ -44,5 +44,22 @@
 .domain-search form.domain-search-form button:hover {
   background-color: black;
 }
+.domain-search .domain-suggestions ul.domain-name-suggestions {
+  list-style-type: none;
+  width: 100%;
+  padding: 0%;
+}
+.domain-search .domain-suggestions ul.domain-name-suggestions li {
+  list-style: none;
+  font-size: small;
+  align-content: center;
+  text-align: center;
+  margin-right: 10px;
+  margin-bottom: 10px;
+  padding: 10px 15px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+}
 
 /*# sourceMappingURL=style-index.css.map*/

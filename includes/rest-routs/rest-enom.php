@@ -60,9 +60,12 @@ function check_domain_callback(WP_REST_REQUEST $request)
         return new WP_Error('enom_error', $e->getMessage(), ['status' => 500]);
     }
 }
-function get_tld_list_callback()
+function get_tld_list_callback(WP_REST_Request $request)
 {
-
+    $securityToken = $request->get_header('X-WP-Nonce');
+    if (! wp_verify_nonce($securityToken, 'wp_rest')) {
+        return new WP_Error('forbidden', 'Invalid security token', ['status' => 403]);
+    }
     try {
         $enom = new PDH_Enom_API();
         $response = $enom->get_tld_list();
@@ -73,6 +76,10 @@ function get_tld_list_callback()
 }
 function get_name_suggestions_callback(WP_REST_REQUEST $request)
 {
+    $securityToken = $request->get_header('X-WP-Nonce');
+    if (! wp_verify_nonce($securityToken, 'wp_rest')) {
+        return new WP_Error('forbidden', 'Invalid security token', ['status' => 403]);
+    }
     $params = $request->get_json_params();
     $searchterm = sanitize_text_field($params['searchterm'] ?? '');
     try {

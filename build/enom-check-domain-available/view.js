@@ -24,10 +24,10 @@
  * @see https://developer.wordpress.org/block-editor/reference-guides/block-api/block-metadata/#view-script
  */
 console.log("this ran ");
-if (typeof DomainWidget === 'undefined') {
+if (typeof window.DomainWidget === 'undefined') {
   console.error('DomainWidget object not found');
 }
-console.log(DomainWidget.token);
+console.log(window.DomainWidget.token);
 console.log(DomainWidget.restUrl);
 console.log(DomainWidget.name);
 
@@ -83,21 +83,16 @@ document.addEventListener('DOMContentLoaded', () => {
           } else {
             const button = document.createElement('a');
             button.textContent = 'Configure Domain Registration';
-            button.href = '/product/register-domain/?domain_name=' + encodeURIComponent(result.Domain.Name) + '&prices' + encodeURIComponent(result.Domain.Prices.Registration);
+            button.href = '/product/register-domain/?domain_name=' + encodeURIComponent(result.Domain.Name) + '&price' + encodeURIComponent(prices.Registration);
             button.className = 'wp-element-button configure-domain-btn';
             const buttonContainer = document.createElement('div');
             buttonContainer.appendChild(button);
             resultDiv.appendChild(buttonContainer);
           }
         } else {
-          resultDiv.textContent = `❌ Domain ${result.Domain.Name} is taken.`;
           if (domain_name) {
             domain_name.value = '';
           }
-
-          //const domainQuery = encodeURIComponent(result.Domain.Name)
-          // get suggested names
-          // get suggested names
           try {
             console.log('Fetching name suggestions for', result.Domain.Name);
             const namesuggestions = await fetch('/wp-json/pdh-enom/v2/get-name-suggestions', {
@@ -115,10 +110,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const suggestions = data['DomainSuggestions'] || [];
             console.log('suggestions ', suggestions);
             console.log('suggestions length', suggestions['Domain'].length);
+            resultDiv.textContent = `❌ Domain ${result.Domain.Name} is taken.`;
             const suggestionsDiv = document.createElement('div');
             suggestionsDiv.className = 'domain-suggestions';
             if (suggestions['Domain'].length > 0) {
-              suggestionsDiv.innerHTML = '<strong>Suggestions:</strong><ul>' + suggestions['Domain'].map(s => `<li>${s}</li>`).join('') + '</ul>';
+              suggestionsDiv.innerHTML = '<div class ="domain-suggestions"><strong>Suggestions:</strong><ul class="domain-name-suggestions">' + suggestions['Domain'].map(s => `<li>${s}</li>`).join('') + '</ul></div>';
             } else {
               suggestionsDiv.textContent = 'No alternative suggestions found.';
             }

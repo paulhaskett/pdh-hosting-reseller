@@ -86,19 +86,7 @@ add_action('plugins_loaded', function () {
 	require_once plugin_dir_path(__FILE__) . 'includes/domain-fields.php';
 	require_once plugin_dir_path(__FILE__) . 'includes/class-hestiacp-api.php';
 
-	add_action('enqueue_block_assets', function () {
-		$handle = 'pdh-hosting-reseller-enom-check-domain-available-view-script-js';
-		if (wp_script_is($handle, 'registered')) {
-			wp_localize_script(
-				$handle,
-				'DomainWidget',
-				[
-					'restUrl' => esc_url(rest_url('pdh-enom/v2/check-domain')),
-					'token'   => wp_create_nonce('pdh_enom_check_domain'),
-				]
-			);
-		}
-	});
+
 
 	new WP_Enom_Hestia_Reseller();
 });
@@ -153,27 +141,36 @@ add_action('rest_api_init', function () {
 	);
 });
 
-add_action('wp_footer', function () {
-?>
-	<script>
-		const DomainWidget = {
-			restUrl: '<?php echo esc_url(rest_url('pdh-enom/v2/check-domain')); ?>',
-			token: '<?php echo wp_create_nonce('wp_rest'); ?>'
-		};
-	</script>
-	<?php
+add_action('wp_enqueue_scripts', function () {
+	$handle = 'pdh-hosting-reseller-enom-check-domain-available-view-script';
+	wp_localize_script(
+		$handle,
+		'DomainWidget',
+		[
+			'restUrl' => esc_url(rest_url('pdh-enom/v2/check-domain')),
+			'token'   => wp_create_nonce('wp_rest'),
+		]
+	);
+});
 
+add_action('wp_footer', function () {
+
+
+
+	// add the user selected domain name to domain name input field after redirect to the product page
 	if (is_product()) : ?>
 		<script>
 			document.addEventListener('DOMContentLoaded', function() {
 				const params = new URLSearchParams(window.location.search);
 				const domain = params.get('domain_name');
+				const price = params.get('price');
 				if (domain) {
 					const input = document.getElementById('domain_name');
 					if (input) {
 						input.value = domain;
 					}
 				}
+
 			});
 		</script>
 <?php endif;
@@ -189,7 +186,7 @@ function pdh_schedule_domain_product_creation()
 }
 
 // Attempt creation after WooCommerce and product types are registered.
-// Use a late init priority to be safe; register_product_type() usually runs on init priority 10.
+
 add_action('init', 'pdh_create_domain_product_if_scheduled', 100);
 
 function pdh_create_domain_product_if_scheduled()
@@ -206,7 +203,7 @@ function pdh_create_domain_product_if_scheduled()
 		return;
 	}
 
-	// Ensure our custom product class file is loaded (adjust path if needed)
+	// Ensure custom product class file is loaded 
 	$domain_product_class_file = plugin_dir_path(__FILE__) . 'includes/class-wc-product-domain.php';
 	if (file_exists($domain_product_class_file)) {
 		require_once $domain_product_class_file;
@@ -223,7 +220,7 @@ function pdh_create_domain_product_if_scheduled()
 	// If product exists by slug, ensure it is assigned the domain type and has price meta
 	$existing = get_page_by_path($slug, OBJECT, 'product');
 	if ($existing) {
-		// assign product_type term 'domain' (will convert it in admin)
+		// assign product_type term 'domain' 
 		wp_set_object_terms($existing->ID, 'domain', 'product_type', false);
 
 		// ensure basic meta exists (price etc.)
@@ -253,8 +250,20 @@ function pdh_create_domain_product_if_scheduled()
 		'post_name'    => $slug,
 		'post_type'    => 'product',
 		'post_status'  => 'publish',
-		'post_content' => 'Register a domain via Enom', // optional; you can leave empty
+		'post_content' => 'Register a domain via Enom', // optional; 
 	]);
+
+	// Set SKU and other WooCommerce data
+	if ($post_id && !is_wp_error($post_id)) {
+		$product = wc_get_product($post_id);
+		if (!$product) {
+			$product = new WC_Product_Simple($post_id);
+		}
+		$product->set_sku('register-domain');
+		$product->set_price(0);
+		$product->set_regular_price(0);
+		$product->save();
+	}
 
 	if (is_wp_error($post_id) || ! $post_id) {
 		error_log('PDH: Failed to create product: ' . (is_wp_error($post_id) ? $post_id->get_error_message() : 'unknown'));
