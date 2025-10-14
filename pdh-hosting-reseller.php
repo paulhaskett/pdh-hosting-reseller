@@ -6,7 +6,7 @@
  * Version:           0.1.0
  * Requires at least: 6.7
  * Requires PHP:      7.4
- * Author:            The WordPress Contributors
+ * Author:            PDH Web Development
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       pdh-hosting-reseller
@@ -85,6 +85,8 @@ add_action('plugins_loaded', function () {
 
 	require_once plugin_dir_path(__FILE__) . 'includes/domain-fields.php';
 	require_once plugin_dir_path(__FILE__) . 'includes/class-hestiacp-api.php';
+	require_once plugin_dir_path(__FILE__) . 'includes/hooks-domain-pricing.php';
+
 
 
 
@@ -139,8 +141,14 @@ add_action('rest_api_init', function () {
 
 		]
 	);
+	register_rest_route('pdh-enom/v2', '/add-domain-to-cart', [
+		'methods'             => 'POST',
+		'callback'            => 'pdh_rest_add_domain_to_cart_callback',
+		'permission_callback' => '__return_true', // handled by token/auth inside callback
+	]);
 });
 
+// load DomainWidget for passing security token
 add_action('wp_enqueue_scripts', function () {
 	$handle = 'pdh-hosting-reseller-enom-check-domain-available-view-script';
 	wp_localize_script(
@@ -149,6 +157,8 @@ add_action('wp_enqueue_scripts', function () {
 		[
 			'restUrl' => esc_url(rest_url('pdh-enom/v2/check-domain')),
 			'token'   => wp_create_nonce('wp_rest'),
+			'currency' => get_woocommerce_currency(),                 // "GBP", 
+			'currencySymbol' => get_woocommerce_currency_symbol(),    // "£", 
 		]
 	);
 });
@@ -157,7 +167,8 @@ add_action('wp_footer', function () {
 
 
 
-	// add the user selected domain name to domain name input field after redirect to the product page
+	// add the user selected domain name to domain name input field after redirect 
+	// to the product page
 	if (is_product()) : ?>
 		<script>
 			document.addEventListener('DOMContentLoaded', function() {
@@ -293,4 +304,30 @@ function pdh_create_domain_product_if_scheduled()
 
 	// final sanity: log created
 	error_log('PDH: Created domain product with ID ' . $post_id);
+}
+
+// reset domain product price after order 
+add_action('woocommerce_thankyou', 'pdh_reset_domain_product_price', 10, 1);
+function pdh_reset_domain_product_price($order_id)
+{
+	if (!$order_id) {
+		return;
+	}
+
+	$order = wc_get_order($order_id);
+
+	if (!$order) {
+		return;
+	}
+
+	// Loop through ordered items
+	foreach ($order->get_items() as $item) {
+		$product = $item->get_product();
+
+		if ($product && $product->get_sku() === 'domain-registration') {
+			$product->set_regular_price(0);
+			$product->set_sale_price('');
+			$product->save();
+		}
+	}
 }

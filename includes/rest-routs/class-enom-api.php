@@ -52,8 +52,8 @@ class PDH_Enom_API
         if ($xml === false) {
             throw new Exception('Invalid XML response from Enom');
         }
-        // prob better to update price on add to cart
-        //$api_response = json_decode(json_encode($xml), true);
+        // // update price on add to cart
+        // $api_response = json_decode(json_encode($xml), true);
         // if ($command === 'check') {
         //     $product = wc_get_product_id_by_sku('register-domain');
         //     if ($product) {
@@ -79,12 +79,14 @@ class PDH_Enom_API
     public function check_domain($domain, $tld, $includePrice = 1)
     {
 
-        return $this->request('check', [
+        $result = $this->request('check', [
             'SLD' => $domain,
             'TLD' => $tld,
             'version' => '2',
             'includeprice' => $includePrice
         ]);
+        // $this->updateCartPrice();
+        return $result;
     }
 
     public function get_tld_list()
