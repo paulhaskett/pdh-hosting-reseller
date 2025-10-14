@@ -30,18 +30,10 @@ add_filter('woocommerce_add_to_cart_validation', function ($passed, $product_id,
     return $passed;
 }, 10, 3);
 
-// Save into cart
-add_filter('woocommerce_add_cart_item_data', function ($cart_item_data, $product_id, $variation_id) {
-    $product = wc_get_product($product_id);
+// NOTE: Cart item data is now handled in hooks-domain-pricing.php
+// The woocommerce_add_cart_item_data filter has been removed from here to avoid conflicts
 
-    if ($product && $product->get_type() === 'domain' && !empty($_POST['domain_name'])) {
-        $cart_item_data['domain_name'] = sanitize_text_field($_POST['domain_name']);
-    }
-
-    return $cart_item_data;
-}, 10, 3);
-
-// Show in cart and checkout
+// Show in cart and checkout - This stays here as it's just display
 add_filter('woocommerce_get_item_data', function ($item_data, $cart_item) {
     if (isset($cart_item['domain_name'])) {
         $item_data[] = [
@@ -89,7 +81,6 @@ add_action('woocommerce_before_save_order_item', function ($item_id, $item) {
 // Template override
 add_filter('woocommerce_locate_template', function ($template, $template_name, $template_path) {
     $plugin_path = plugin_dir_path(__FILE__) . 'templates/';
-
 
     // Look in plugin's template folder first
     if (file_exists($plugin_path . $template_name)) {

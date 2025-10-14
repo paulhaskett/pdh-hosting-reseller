@@ -82,10 +82,10 @@ add_action('plugins_loaded', function () {
 	}
 
 	require_once plugin_dir_path(__FILE__) . 'includes/class-wp-enom-hestia-reseller.php';
-
-	require_once plugin_dir_path(__FILE__) . 'includes/domain-fields.php';
-	require_once plugin_dir_path(__FILE__) . 'includes/class-hestiacp-api.php';
 	require_once plugin_dir_path(__FILE__) . 'includes/hooks-domain-pricing.php';
+	//require_once plugin_dir_path(__FILE__) . 'includes/domain-fields.php';
+	require_once plugin_dir_path(__FILE__) . 'includes/class-hestiacp-api.php';
+
 
 
 
@@ -174,7 +174,8 @@ add_action('wp_footer', function () {
 			document.addEventListener('DOMContentLoaded', function() {
 				const params = new URLSearchParams(window.location.search);
 				const domain = params.get('domain_name');
-				const price = params.get('price');
+				const price = params.get('domain_registration_price');
+				const tld = params.get('domain_tld');
 				if (domain) {
 					const input = document.getElementById('domain_name');
 					if (input) {
@@ -324,7 +325,7 @@ function pdh_reset_domain_product_price($order_id)
 	foreach ($order->get_items() as $item) {
 		$product = $item->get_product();
 
-		if ($product && $product->get_sku() === 'domain-registration') {
+		if ($product && $product->get_sku() === 'register-domain') {
 			$product->set_regular_price(0);
 			$product->set_sale_price('');
 			$product->save();
