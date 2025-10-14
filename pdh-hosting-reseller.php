@@ -172,17 +172,126 @@ add_action('wp_footer', function () {
 	if (is_product()) : ?>
 		<script>
 			document.addEventListener('DOMContentLoaded', function() {
+				// Get URL parameters
 				const params = new URLSearchParams(window.location.search);
-				const domain = params.get('domain_name');
-				const price = params.get('domain_registration_price');
-				const tld = params.get('domain_tld');
-				if (domain) {
-					const input = document.getElementById('domain_name');
-					if (input) {
-						input.value = domain;
+				const domainName = params.get('domain_name');
+				const domainTld = params.get('domain_tld');
+				const price = params.get('price') || params.get('domain_registration_price');
+
+				console.log('URL Params:', {
+					domainName,
+					domainTld,
+					price
+				});
+
+				if (domainName) {
+					// Fill in the visible domain name input field
+					const domainInput = document.getElementById('domain_name');
+					if (domainInput) {
+						domainInput.value = domainName;
+
+						// Make it readonly if it came from URL (user already searched for it)
+						domainInput.setAttribute('readonly', 'readonly');
+						domainInput.style.backgroundColor = '#f5f5f5';
+						domainInput.style.cursor = 'not-allowed';
+
+						// Add a note that they can search again if needed
+						const note = document.createElement('small');
+						note.style.display = 'block';
+						note.style.marginTop = '5px';
+						note.style.color = '#666';
+						note.textContent = 'Domain selected from search. Use the search widget to find a different domain.';
+
+						if (domainInput.parentNode && !domainInput.parentNode.querySelector('small')) {
+							domainInput.parentNode.appendChild(note);
+						}
+
+						console.log('Set domain_name input to:', domainName);
+					}
+
+					// Find or create the product form
+					const productForm = document.querySelector('form.cart');
+					if (productForm) {
+						// Ensure hidden field for domain_name
+						ensureHiddenField(productForm, 'domain_name', domainName);
+
+						// Ensure hidden field for domain_tld if provided
+						if (domainTld) {
+							ensureHiddenField(productForm, 'domain_tld', domainTld);
+						}
+
+						// Ensure hidden field for price if provided
+						if (price && parseFloat(price) > 0) {
+							ensureHiddenField(productForm, 'domain_registration_price', price);
+							console.log('Set price to:', price);
+
+							// Update the displayed price on the page
+							updateDisplayedPrice(parseFloat(price));
+						}
+					} else {
+						console.warn('Product form not found');
 					}
 				}
 
+				/**
+				 * Ensure a hidden input field exists with the correct value
+				 */
+				function ensureHiddenField(form, name, value) {
+					let field = form.querySelector('input[name="' + name + '"]');
+
+					// Check if field exists and is visible (like domain_name)
+					const isVisible = field && field.type !== 'hidden';
+
+					if (!field || isVisible) {
+						// Create hidden field (or create additional hidden field for visible inputs)
+						let hiddenField = form.querySelector('input[type="hidden"][name="' + name + '"]');
+						if (!hiddenField) {
+							hiddenField = document.createElement('input');
+							hiddenField.type = 'hidden';
+							hiddenField.name = name;
+							form.appendChild(hiddenField);
+							console.log('Created hidden field:', name);
+						}
+						hiddenField.value = value;
+					} else {
+						// Update existing hidden field
+						field.value = value;
+					}
+
+					console.log('Set ' + name + ' = ' + value);
+				}
+
+				/**
+				 * Update the displayed price on the product page
+				 */
+				function updateDisplayedPrice(newPrice) {
+					if (isNaN(newPrice) || newPrice <= 0) return;
+
+					const formatted = newPrice.toFixed(2);
+					console.log('Updating displayed price to:', formatted);
+
+					// Get currency symbol from DomainWidget or default to £
+					const symbol = (window.DomainWidget && window.DomainWidget.currencySymbol) ?
+						window.DomainWidget.currencySymbol :
+						'£';
+
+					// Update all price elements on the page
+					document.querySelectorAll('.woocommerce-Price-amount.amount').forEach(function(el) {
+						const currencySpan = el.querySelector('.woocommerce-Price-currencySymbol');
+						if (currencySpan) {
+							const currencyHtml = currencySpan.outerHTML;
+							el.innerHTML = '<bdi>' + currencyHtml + formatted + '</bdi>';
+						} else {
+							el.innerHTML = '<bdi><span class="woocommerce-Price-currencySymbol">' + symbol + '</span>' + formatted + '</bdi>';
+						}
+					});
+
+					// Also update the price in the summary if it exists
+					const priceElement = document.querySelector('.summary .price');
+					if (priceElement) {
+						console.log('Updated price element');
+					}
+				}
 			});
 		</script>
 <?php endif;

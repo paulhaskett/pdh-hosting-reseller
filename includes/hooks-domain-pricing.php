@@ -183,3 +183,47 @@ add_action('woocommerce_checkout_create_order_line_item', function ($item, $cart
         $item->add_meta_data('_domain_registration_price', $values['domain_registration_price']);
     }
 }, 10, 4);
+
+/**
+ * Check if the same domain already exists in cart before adding
+ */
+add_filter('woocommerce_add_to_cart_validation', function ($passed, $product_id, $quantity, $variation_id = 0, $variations = [], $cart_item_data = []) {
+    $product = wc_get_product($product_id);
+
+    // Only check domain products
+    if (!$product || $product->get_type() !== 'domain') {
+        return $passed;
+    }
+
+    // Get the domain being added
+    $new_domain_name = sanitize_text_field($_POST['domain_name'] ?? '');
+    $new_domain_tld = sanitize_text_field($_POST['domain_tld'] ?? '');
+    $new_full_domain = $new_domain_name . ($new_domain_tld ? '.' . $new_domain_tld : '');
+
+    if (empty($new_full_domain)) {
+        return $passed; // Let other validation handle empty domain
+    }
+
+    // Check if this domain already exists in cart
+    foreach (WC()->cart->get_cart() as $cart_item_key => $cart_item) {
+        if (isset($cart_item['domain_name'])) {
+            $existing_domain = $cart_item['domain_name'];
+            if (!empty($cart_item['domain_tld'])) {
+                $existing_domain .= '.' . $cart_item['domain_tld'];
+            }
+
+            if (strtolower($existing_domain) === strtolower($new_full_domain)) {
+                wc_add_notice(
+                    sprintf(
+                        __('The domain "%s" is already in your cart. You can only register each domain once. If you want to change the registration period, please remove it from the cart first.', 'pdh-hosting-reseller'),
+                        esc_html($new_full_domain)
+                    ),
+                    'error'
+                );
+                return false;
+            }
+        }
+    }
+
+    return $passed;
+}, 10, 6);

@@ -23,6 +23,10 @@ class WC_Product_Domain extends WC_Product_Simple
     {
         return true;
     }
+    public function get_price($context = 'view')
+    {
+        return parent::get_price($context);
+    }
 
     public function is_sold_individually()
     {

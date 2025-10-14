@@ -17,6 +17,21 @@ add_action('woocommerce_single_product_summary', function () {
     }
 });
 
+add_filter('woocommerce_quantity_input_min', function ($min, $product) {
+    return $product->get_sku() === 'register-domain' ? 1 : $min;
+}, 10, 2);
+
+add_filter('woocommerce_quantity_input_max', function ($max, $product) {
+    return $product->get_sku() === 'register-domain' ? 1 : $max;
+}, 10, 2);
+
+add_action('wp', function () {
+    if (is_product() && get_post_field('post_name', get_the_ID()) === 'register-domain') {
+        remove_action('woocommerce_before_add_to_cart_quantity', 'woocommerce_quantity_input', 10);
+    }
+});
+
+
 // Validate input
 add_filter('woocommerce_add_to_cart_validation', function ($passed, $product_id, $quantity) {
     $product = wc_get_product($product_id);

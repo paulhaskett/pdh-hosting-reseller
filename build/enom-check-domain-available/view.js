@@ -71,12 +71,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Also add via REST API for immediate cart update
-            // await addDomainToCart(domain, tld, regPrice)
+            //await addDomainToCart(domain, tld, regPrice)
           } else {
             // Not on product page - show button to go there
             const button = document.createElement('a');
             button.textContent = 'Configure Domain Registration';
-            button.href = '/product/register-domain/?domain_name=' + encodeURIComponent(result.Domain.Name) + '&price=' + encodeURIComponent(regPrice);
+            button.href = '/product/register-domain/?domain_name=' + encodeURIComponent(result.Domain.Name) + '&domain_registration_price=' + encodeURIComponent(regPrice);
             button.className = 'wp-element-button configure-domain-btn';
             const buttonContainer = document.createElement('div');
             buttonContainer.appendChild(button);
