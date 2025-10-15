@@ -164,139 +164,225 @@ add_action('wp_enqueue_scripts', function () {
 });
 
 add_action('wp_footer', function () {
+	// Only run on single product pages
+	if (!is_product()) {
+		return;
+	}
 
+	global $product;
 
+	// Only run for domain products
+	if (!$product || $product->get_type() !== 'domain') {
+		return;
+	}
+?>
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			// Get URL parameters from the address bar
+			// Example: /product/register-domain/?domain_name=example&domain_tld=com&price=6.99
+			const params = new URLSearchParams(window.location.search);
+			const domainName = params.get('domain_name');
+			const domainTld = params.get('domain_tld');
+			const pricePerYear = params.get('price') || params.get('domain_registration_price');
 
-	// add the user selected domain name to domain name input field after redirect 
-	// to the product page
-	if (is_product()) : ?>
-		<script>
-			document.addEventListener('DOMContentLoaded', function() {
-				// Get URL parameters
-				const params = new URLSearchParams(window.location.search);
-				const domainName = params.get('domain_name');
-				const domainTld = params.get('domain_tld');
-				const price = params.get('price') || params.get('domain_registration_price');
+			console.log('URL Params:', {
+				domainName,
+				domainTld,
+				pricePerYear
+			});
 
-				console.log('URL Params:', {
-					domainName,
-					domainTld,
-					price
+			// If domain name was passed in URL, fill in the form
+			if (domainName) {
+				// Fill in the visible domain name input field
+				const domainInput = document.getElementById('domain_name');
+				if (domainInput) {
+					domainInput.value = domainName;
+
+					// Make it readonly since user already searched for it
+					domainInput.setAttribute('readonly', 'readonly');
+					domainInput.style.backgroundColor = '#f5f5f5';
+					domainInput.style.cursor = 'not-allowed';
+
+					// Add a note explaining this
+					const note = document.createElement('small');
+					note.style.display = 'block';
+					note.style.marginTop = '5px';
+					note.style.color = '#666';
+					note.textContent = 'Domain selected from search. Use the search widget to find a different domain.';
+
+					if (domainInput.parentNode && !domainInput.parentNode.querySelector('small')) {
+						domainInput.parentNode.appendChild(note);
+					}
+
+					console.log('Set domain_name input to:', domainName);
+				}
+
+				// Get the add-to-cart form
+				const productForm = document.querySelector('form.cart');
+				if (productForm) {
+					// Create or update hidden field for domain_name
+					ensureHiddenField(productForm, 'domain_name', domainName);
+
+					// Create or update hidden field for domain_tld
+					if (domainTld) {
+						ensureHiddenField(productForm, 'domain_tld', domainTld);
+					}
+
+					// Store the per-year price for calculations
+					if (pricePerYear && parseFloat(pricePerYear) > 0) {
+						window.domainPricePerYear = parseFloat(pricePerYear);
+						console.log('Stored domainPricePerYear:', window.domainPricePerYear);
+
+						// Update price initially (for 1 year)
+						updatePriceForYears(1);
+
+						// Listen for changes to the years dropdown
+						const yearsSelect = document.getElementById('domain_years');
+						console.log('Years select element:', yearsSelect);
+
+						if (yearsSelect) {
+							console.log('Setting up change listener for years dropdown');
+							yearsSelect.addEventListener('change', function() {
+								const years = parseInt(this.value) || 1;
+								console.log('Years changed to:', years);
+								updatePriceForYears(years);
+								ensureHiddenField(productForm, 'domain_years', years);
+							});
+
+							// Also add an input event listener as backup
+							yearsSelect.addEventListener('input', function() {
+								const years = parseInt(this.value) || 1;
+								console.log('Years input event:', years);
+								updatePriceForYears(years);
+							});
+						} else {
+							console.warn('domain_years dropdown not found - it may not be rendered yet');
+							// Try again after a delay if not found
+							setTimeout(function() {
+								const yearsSelect = document.getElementById('domain_years');
+								if (yearsSelect) {
+									console.log('Found domain_years after delay, setting up listener');
+									yearsSelect.addEventListener('change', function() {
+										const years = parseInt(this.value) || 1;
+										console.log('Years changed to:', years);
+										updatePriceForYears(years);
+									});
+								}
+							}, 500);
+						}
+					}
+				} else {
+					console.warn('Product form not found');
+				}
+			}
+
+			/**
+			 * Update price based on number of years selected
+			 */
+			function updatePriceForYears(years) {
+				if (!window.domainPricePerYear || years < 1) return;
+
+				// Calculate total price
+				const totalPrice = window.domainPricePerYear * years;
+				console.log('Years:', years, 'Total price:', totalPrice);
+
+				// Update hidden field in form with the total price
+				const productForm = document.querySelector('form.cart');
+				if (productForm) {
+					ensureHiddenField(productForm, 'domain_registration_price', totalPrice.toString());
+				}
+
+				// Update the displayed price on the page
+				updateDisplayedPrice(totalPrice, years);
+			}
+
+			/**
+			 * Create or update a hidden input field
+			 */
+			function ensureHiddenField(form, name, value) {
+				let field = form.querySelector('input[name="' + name + '"]');
+
+				// Check if field is visible (like domain_name text input)
+				const isVisible = field && field.type !== 'hidden';
+
+				if (!field || isVisible) {
+					// Need to create a hidden field
+					let hiddenField = form.querySelector('input[type="hidden"][name="' + name + '"]');
+					if (!hiddenField) {
+						hiddenField = document.createElement('input');
+						hiddenField.type = 'hidden';
+						hiddenField.name = name;
+						form.appendChild(hiddenField);
+						console.log('Created hidden field:', name);
+					}
+					hiddenField.value = value;
+				} else {
+					// Update existing hidden field
+					field.value = value;
+				}
+
+				console.log('Set ' + name + ' = ' + value);
+			}
+
+			/**
+			 * Update the displayed price on the product page
+			 */
+			function updateDisplayedPrice(newPrice, years) {
+				if (isNaN(newPrice) || newPrice <= 0) return;
+
+				const formatted = newPrice.toFixed(2);
+				console.log('updateDisplayedPrice called:', {
+					newPrice,
+					formatted,
+					years
 				});
 
-				if (domainName) {
-					// Fill in the visible domain name input field
-					const domainInput = document.getElementById('domain_name');
-					if (domainInput) {
-						domainInput.value = domainName;
+				// Get currency symbol from DomainWidget or default to £
+				const symbol = (window.DomainWidget && window.DomainWidget.currencySymbol) ?
+					window.DomainWidget.currencySymbol :
+					'£';
 
-						// Make it readonly if it came from URL (user already searched for it)
-						domainInput.setAttribute('readonly', 'readonly');
-						domainInput.style.backgroundColor = '#f5f5f5';
-						domainInput.style.cursor = 'not-allowed';
+				console.log('Currency symbol:', symbol);
 
-						// Add a note that they can search again if needed
-						const note = document.createElement('small');
-						note.style.display = 'block';
-						note.style.marginTop = '5px';
-						note.style.color = '#666';
-						note.textContent = 'Domain selected from search. Use the search widget to find a different domain.';
+				// Find all price elements on the page and update them
+				const priceElements = document.querySelectorAll('.woocommerce-Price-amount.amount');
+				console.log('Found price elements:', priceElements.length);
 
-						if (domainInput.parentNode && !domainInput.parentNode.querySelector('small')) {
-							domainInput.parentNode.appendChild(note);
-						}
+				priceElements.forEach(function(el, index) {
+					let priceHtml = '<bdi><span class="woocommerce-Price-currencySymbol">' + symbol + '</span>' + formatted + '</bdi>';
 
-						console.log('Set domain_name input to:', domainName);
+					// Add years note if more than 1 year
+					if (years > 1) {
+						priceHtml += ' <small style="font-size: 0.8em; color: #666;">(' + years + ' years)</small>';
 					}
 
-					// Find or create the product form
-					const productForm = document.querySelector('form.cart');
-					if (productForm) {
-						// Ensure hidden field for domain_name
-						ensureHiddenField(productForm, 'domain_name', domainName);
+					console.log('Updating price element', index, 'with:', priceHtml);
+					el.innerHTML = priceHtml;
+				});
 
-						// Ensure hidden field for domain_tld if provided
-						if (domainTld) {
-							ensureHiddenField(productForm, 'domain_tld', domainTld);
-						}
+				// If no price elements found, try alternate selectors
+				if (priceElements.length === 0) {
+					console.warn('No .woocommerce-Price-amount elements found, trying alternate selectors');
 
-						// Ensure hidden field for price if provided
-						if (price && parseFloat(price) > 0) {
-							ensureHiddenField(productForm, 'domain_registration_price', price);
-							console.log('Set price to:', price);
-
-							// Update the displayed price on the page
-							updateDisplayedPrice(parseFloat(price));
-						}
-					} else {
-						console.warn('Product form not found');
-					}
-				}
-
-				/**
-				 * Ensure a hidden input field exists with the correct value
-				 */
-				function ensureHiddenField(form, name, value) {
-					let field = form.querySelector('input[name="' + name + '"]');
-
-					// Check if field exists and is visible (like domain_name)
-					const isVisible = field && field.type !== 'hidden';
-
-					if (!field || isVisible) {
-						// Create hidden field (or create additional hidden field for visible inputs)
-						let hiddenField = form.querySelector('input[type="hidden"][name="' + name + '"]');
-						if (!hiddenField) {
-							hiddenField = document.createElement('input');
-							hiddenField.type = 'hidden';
-							hiddenField.name = name;
-							form.appendChild(hiddenField);
-							console.log('Created hidden field:', name);
-						}
-						hiddenField.value = value;
-					} else {
-						// Update existing hidden field
-						field.value = value;
-					}
-
-					console.log('Set ' + name + ' = ' + value);
-				}
-
-				/**
-				 * Update the displayed price on the product page
-				 */
-				function updateDisplayedPrice(newPrice) {
-					if (isNaN(newPrice) || newPrice <= 0) return;
-
-					const formatted = newPrice.toFixed(2);
-					console.log('Updating displayed price to:', formatted);
-
-					// Get currency symbol from DomainWidget or default to £
-					const symbol = (window.DomainWidget && window.DomainWidget.currencySymbol) ?
-						window.DomainWidget.currencySymbol :
-						'£';
-
-					// Update all price elements on the page
-					document.querySelectorAll('.woocommerce-Price-amount.amount').forEach(function(el) {
-						const currencySpan = el.querySelector('.woocommerce-Price-currencySymbol');
-						if (currencySpan) {
-							const currencyHtml = currencySpan.outerHTML;
-							el.innerHTML = '<bdi>' + currencyHtml + formatted + '</bdi>';
-						} else {
-							el.innerHTML = '<bdi><span class="woocommerce-Price-currencySymbol">' + symbol + '</span>' + formatted + '</bdi>';
+					// Try .price class
+					const altPrices = document.querySelectorAll('.price');
+					console.log('Found .price elements:', altPrices.length);
+					altPrices.forEach(function(el) {
+						const priceSpan = el.querySelector('.woocommerce-Price-amount');
+						if (priceSpan) {
+							let priceHtml = '<span class="woocommerce-Price-amount"><bdi><span class="woocommerce-Price-currencySymbol">' + symbol + '</span>' + formatted + '</bdi></span>';
+							if (years > 1) {
+								priceHtml += ' <small style="font-size: 0.8em; color: #666;">(' + years + ' years)</small>';
+							}
+							el.innerHTML = priceHtml;
 						}
 					});
-
-					// Also update the price in the summary if it exists
-					const priceElement = document.querySelector('.summary .price');
-					if (priceElement) {
-						console.log('Updated price element');
-					}
 				}
-			});
-		</script>
-<?php endif;
+			}
+		});
+	</script>
+<?php
 });
-
 
 // schedule creation on plugin activation
 register_activation_hook(__FILE__, 'pdh_schedule_domain_product_creation');

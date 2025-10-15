@@ -19,6 +19,8 @@ add_filter('woocommerce_add_cart_item_data', function ($cart_item_data, $product
     }
 
     error_log('Domain product detected!');
+    $domain_name = '';
+    $domain_tld = '';
 
     // ALWAYS add unique key first to prevent merging - CRITICAL!
     $cart_item_data['unique_key'] = md5(microtime() . rand());
@@ -49,6 +51,33 @@ add_filter('woocommerce_add_cart_item_data', function ($cart_item_data, $product
         }
     } else {
         error_log('WARNING: domain_registration_price not found in POST');
+    }
+
+    // Get and validate the price (this is per-year price)
+    $price_per_year = 0;
+    if (isset($_POST['domain_registration_price'])) {
+        $price_per_year = floatval(str_replace(',', '.', sanitize_text_field(wp_unslash($_POST['domain_registration_price']))));
+        error_log('Price per year from POST: ' . $price_per_year);
+    }
+
+    // Get number of years (default to 1)
+    $years = 1;
+    if ($price_per_year > 0) {
+        // Calculate total price based on years
+        $total_price = $price_per_year * $years;
+        $cart_item_data['domain_registration_price'] = $total_price;
+        $cart_item_data['domain_price_per_year'] = $price_per_year;
+        error_log('Total price saved to cart: ' . $total_price . ' (' . $years . ' years x £' . $price_per_year . ')');
+    } else {
+        error_log('WARNING: Price is 0 or negative, not saving');
+    }
+
+    // Create a unique identifier based on domain + tld (not random)
+    // This allows WooCommerce to detect if the same domain is being added again
+    $full_domain = $domain_name . ($domain_tld ? '.' . $domain_tld : '');
+    if ($full_domain) {
+        $cart_item_data['domain_identifier'] = md5($full_domain);
+        error_log('Domain identifier: ' . $cart_item_data['domain_identifier']);
     }
 
     error_log('Final cart_item_data with unique_key: ' . $cart_item_data['unique_key']);

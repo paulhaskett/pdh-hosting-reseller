@@ -122,8 +122,11 @@ function pdh_rest_add_domain_to_cart_callback(WP_REST_Request $request)
     $domain_name = isset($params['domain_name']) ? sanitize_text_field($params['domain_name']) : '';
     $domain_tld  = isset($params['domain_tld']) ? sanitize_text_field($params['domain_tld']) : '';
     $price       = isset($params['domain_registration_price']) ? floatval($params['domain_registration_price']) : 0;
+    $years = isset($params['domain_years']) ? absint($params['domain_years']) : 1;
 
-    error_log("Domain: $domain_name, TLD: $domain_tld, Price: $price");
+    // Ensure years is between 1-10
+    $years = max(1, min(10, $years));
+    error_log("Domain: $domain_name, TLD: $domain_tld, Price: $price, Years: $years");
 
     if (empty($domain_name) || empty($domain_tld) || $price <= 0) {
         error_log('ERROR: Missing or invalid data');
