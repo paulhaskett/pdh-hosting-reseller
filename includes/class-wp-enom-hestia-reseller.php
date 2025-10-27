@@ -162,15 +162,16 @@ class WP_Enom_Hestia_Reseller
         add_action('woocommerce_product_data_panels', [$this, 'add_domain_price_fields']);
         add_action('woocommerce_process_product_meta', [$this, 'save_domain_price_fields'], 40);
 
-        add_action('woocommerce_single_product_summary', function () {
-            global $product;
-            if ($product->get_type() === 'domain') {
-                echo '<p>Default TLD: ' . esc_html($product->get_meta('_domain_default_tld')) . '</p>';
-                echo '<p>Hosting Package: ' . esc_html($product->get_meta('_domain_default_package')) . '</p>';
-            }
-        }, 25);
+        // add_action('woocommerce_single_product_summary', function () {
+        //     global $product;
+        //     if ($product->get_type() === 'domain') {
+        //         echo '<p>Default TLD: ' . esc_html($product->get_meta('_domain_default_tld')) . '</p>';
+        //         echo '<p>Hosting Package: ' . esc_html($product->get_meta('_domain_default_package')) . '</p>';
+        //     }
+        // }, 25);
         // Load frontend domain fields
         require_once plugin_dir_path(__FILE__) . './domain-fields.php';
+        require_once plugin_dir_path(__FILE__) . './hooks-pdh-uk-fields.php';
     }
 
     /** -------------------------

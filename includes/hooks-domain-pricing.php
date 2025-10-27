@@ -36,6 +36,11 @@ add_filter('woocommerce_add_cart_item_data', function ($cart_item_data, $product
         $cart_item_data['domain_tld'] = sanitize_text_field(wp_unslash($_POST['domain_tld']));
         error_log('Domain TLD set: ' . $cart_item_data['domain_tld']);
     }
+    // Get domain registration period
+    if (!empty($_POST['domain_years'])) {
+        $cart_item_data['domain_years'] = intval(wp_unslash($_POST['domain_years']));
+        error_log('Domain registration period set: ' . $cart_item_data['domain_years']);
+    }
 
     // Get and validate the price
     if (isset($_POST['domain_registration_price'])) {
@@ -175,6 +180,33 @@ add_filter('woocommerce_get_item_data', function ($item_data, $cart_item) {
             'display' => '<strong>' . $domain_display . '</strong>', // Make it prominent
         ];
     }
+    if (!empty($cart_item['domain_years'])) {
+        $years = intval($cart_item['domain_years']);
+        $item_data[] = [
+            'key'   => __('Registration Period', 'pdh-hosting-reseller'),
+            'value' => sprintf(_n('%d year', '%d years', $years, 'pdh-hosting-reseller'), $years),
+        ];
+    } else {
+        error_log('no domain years');
+    }
+    if (!empty($cart_item['domain_name'])) {
+        $sld = $cart_item['domain_name'];
+        $item_data[] = [
+            'key'   => __('SLD', 'pdh-hosting-reseller'),
+            'value' => $sld,
+        ];
+    } else {
+        error_log('no domain years');
+    }
+    if (!empty($cart_item['domain_tld'])) {
+        $tld = $cart_item['domain_tld'];
+        $item_data[] = [
+            'key'   => __('TLD', 'pdh-hosting-reseller'),
+            'value' =>  $tld,
+        ];
+    } else {
+        error_log('no domain tld');
+    }
     return $item_data;
 }, 10, 2);
 
@@ -206,7 +238,10 @@ add_action('woocommerce_checkout_create_order_line_item', function ($item, $cart
         }
         $item->add_meta_data(__('Domain', 'pdh-hosting-reseller'), $domain_display);
     }
-
+    if (!empty($values['domain_years'])) {
+        $years = intval($values['domain_years']);
+        $item->add_meta_data(__('Registration Period', 'pdh-hosting-reseller'), $years);
+    }
     // Also save the price so you know what was charged
     if (!empty($values['domain_registration_price'])) {
         $item->add_meta_data('_domain_registration_price', $values['domain_registration_price']);
@@ -256,3 +291,101 @@ add_filter('woocommerce_add_to_cart_validation', function ($passed, $product_id,
 
     return $passed;
 }, 10, 6);
+
+
+
+add_action('woocommerce_order_status_completed', function ($order_id) {
+    $order = wc_get_order($order_id);
+    error_log('=== ORDER STATUS COMPLETED HOOK FIRED ===');
+
+    foreach ($order->get_items() as $item) {
+        // This tells Intelephense exactly what type $item is
+        if (!$item instanceof WC_Order_Item_Product) {
+            continue;
+        }
+        $product = $item->get_product();
+        error_log('domain ' . $item->get_meta('domain_name'));
+        error_log('tld ' . $item->get_meta('domain_tld'));
+        error_log('reg type ' . $item->get_meta('domain_uk_registrant_type'));
+
+        if ($product && $product->get_type() === 'domain') {
+            // Get domain info from order
+            $domain_name = $item->get_meta('domain_name'); // "example"
+            $domain_tld = $item->get_meta('domain_tld');   // "com"
+            $years = $item->get_meta('domain_years') ?: 1;
+
+            // Get customer info from order
+            $contact = [
+                'first_name' => $order->get_billing_first_name(),
+                'last_name' => $order->get_billing_last_name(),
+                'organization' => $order->get_billing_company(),
+                'address1' => $order->get_billing_address_1(),
+                'address2' => $order->get_billing_address_2(),
+                'city' => $order->get_billing_city(),
+                'state' => $order->get_billing_state(),
+                'postal_code' => $order->get_billing_postcode(),
+                'country' => $order->get_billing_country(),
+                'email' => $order->get_billing_email(),
+                'phone' => $order->get_billing_phone(),
+            ];
+            // Add .uk extended attributes (if present)
+            $uk_fields = [
+                'uk_legal_type'   => $item->get_meta('domain_uk_registrant_type'),
+                'uk_reg_co_no'    => $item->get_meta('domain_uk_company_number'),
+                'registered_for'  => $item->get_meta('domain_uk_trading_name'),
+                'uk_reg_opt_out'  => $item->get_meta('domain_uk_reg_opt_out'),
+            ];
+
+            // Only include if relevant (.uk TLD)
+            if (strpos($domain_tld, 'uk') !== false) {
+                $contact = array_merge($contact, $uk_fields);
+                error_log('contact array after merge ' . print_r($contact, true));
+            }
+
+            try {
+
+                $enom = new PDH_Enom_API();
+
+                // Register the domain
+                $result = $enom->register_domain($domain_name, $domain_tld, $years, $contact);
+
+                if ($result['success']) {
+                    // Success! Update order
+                    $order->add_order_note(
+                        sprintf(
+                            __('Domain %s successfully registered with Enom. Order ID: %s', 'pdh-hosting-reseller'),
+                            $result['domain'],
+                            $result['order_id']
+                        )
+                    );
+
+                    // Save Enom order ID to item meta
+                    $item->add_meta_data('_enom_order_id', $result['order_id'], true);
+                    $item->save();
+
+                    error_log("SUCCESS: Registered {$result['domain']} for {$years} years");
+                } else {
+                    throw new Exception('Registration returned unsuccessful');
+                }
+            } catch (Exception $e) {
+                // Log error
+                error_log('Domain registration error: ' . $e->getMessage());
+
+                // Add order note
+                $order->add_order_note(
+                    sprintf(
+                        __('Domain registration failed: %s', 'pdh-hosting-reseller'),
+                        $e->getMessage()
+                    )
+                );
+
+                // Optional: Send email to admin
+                wp_mail(
+                    get_option('admin_email'),
+                    'Domain Registration Failed',
+                    "Order #{$order_id}: Failed to register {$domain_name}.{$domain_tld}\n\nError: {$e->getMessage()}"
+                );
+            }
+        }
+    }
+}, 30, 7);

@@ -15,20 +15,21 @@ add_action('woocommerce_single_product_summary', function () {
             'placeholder' => 'example.com',
             'class' => 'input'
         ]);
-        woocommerce_form_field('domain_years', [
+        woocommerce_form_field('domain-years-selector', [
             'type' => 'select',
             'required' => true,
             'label' => __('Registration Period', 'pdh-hosting-reseller'),
             'class' => ['form-row-wide'],
             'options' => [
-                '1' => __('1 Year', 'wp-enom-hestia-reseller'),
-                '2' => __('2 Years', 'wp-enom-hestia-reseller'),
-                '3' => __('3 Years', 'wp-enom-hestia-reseller'),
-                '4' => __('4 Years', 'wp-enom-hestia-reseller'),
-                '5' => __('5 Years', 'wp-enom-hestia-reseller'),
-                '10' => __('10 Years', 'wp-enom-hestia-reseller'),
+                '' => __('Please Select', 'pdh-hosting-reseller'),
+                '1' => __('1 Year', 'pdh-hosting-reseller'),
+                '2' => __('2 Years', 'pdh-hosting-reseller'),
+                '3' => __('3 Years', 'pdh-hosting-reseller'),
+                '4' => __('4 Years', 'pdh-hosting-reseller'),
+                '5' => __('5 Years', 'pdh-hosting-reseller'),
+                '10' => __('10 Years', 'pdh-hosting-reseller'),
             ],
-            'default' => '1',
+            'default' => '',
         ]);
         echo '</div>';
 
@@ -79,20 +80,32 @@ add_filter('woocommerce_add_to_cart_validation', function ($passed, $product_id,
 // The woocommerce_add_cart_item_data filter has been removed from here to avoid conflicts
 
 // Show in cart and checkout - This stays here as it's just display
-add_filter('woocommerce_get_item_data', function ($item_data, $cart_item) {
-    if (isset($cart_item['domain_name'])) {
-        $item_data[] = [
-            'key' => __('Domain Name', 'pdh-hosting-reseller'),
-            'value' => esc_html($cart_item['domain_name']),
-        ];
-    }
-    return $item_data;
-}, 10, 2);
+// add_filter('woocommerce_get_item_data', function ($item_data, $cart_item) {
+//     if (isset($cart_item['domain_name'])) {
+//         $item_data[] = [
+//             'key' => __('Domain Name', 'pdh-hosting-reseller'),
+//             'value' => esc_html($cart_item['domain_name']),
+//         ];
+//     }
+//     if (isset($cart_item['domain_years'])) {
+//         $item_data[] = [
+//             'key' => __('Registration Period 2', 'pdh-hosting-reseller'),
+//             'value' => esc_html($cart_item['domain_years']),
+//         ];
+//     }
+//     return $item_data;
+// }, 10, 2);
 
 // Save into order item
 add_action('woocommerce_checkout_create_order_line_item', function ($item, $cart_item_key, $values, $order) {
     if (isset($values['domain_name'])) {
         $item->add_meta_data('domain_name', $values['domain_name'], true);
+    }
+    if (isset($values['domain_tld'])) {
+        $item->add_meta_data('domain_tld', $values['domain_tld'], true);
+    }
+    if (isset($values['domain_years'])) {
+        $item->add_meta_data('domain_years', $values['domain_years'], true);
     }
 }, 10, 4);
 
@@ -101,9 +114,15 @@ add_action('woocommerce_before_order_itemmeta', function ($item_id, $item, $prod
     if ($item->get_meta('domain_name')) {
         echo '<p><strong>' . __('Domain Name', 'pdh-hosting-reseller') . ':</strong> ' . esc_html($item->get_meta('domain_name')) . '</p>';
     }
+    if ($item->get_meta('domain_years')) {
+        echo '<p><strong>' . __('Registration Period', 'pdh-hosting-reseller') . ':</strong> ' . esc_html($item->get_meta('domain_years')) . ' Years</p>';
+    }
+    if ($item->get_meta('domain_tld')) {
+        echo '<p><strong>' . __('TLD', 'pdh-hosting-reseller') . ':</strong> ' . esc_html($item->get_meta('domain_tld')) . ' </p>';
+    }
 }, 10, 3);
 
-// Add editable field in admin
+// Add editable field in admin not sure this is needed
 add_action('woocommerce_after_order_itemmeta', function ($item_id, $item, $product) {
     if ($product && $product->get_type() === 'domain') {
         woocommerce_wp_text_input([
@@ -115,15 +134,17 @@ add_action('woocommerce_after_order_itemmeta', function ($item_id, $item, $produ
     }
 }, 10, 3);
 
-// Save editable field
-add_action('woocommerce_before_save_order_item', function ($item_id, $item) {
+// Save editable field if the above is not needed neither is this
+add_action('woocommerce_before_save_order_item', function ($item) {
+    $item_id = $item->get_id();
+    error_log('Order item ID: ' . $item_id);
     if (isset($_POST['order_item_domain_name'][$item_id])) {
         $domain = sanitize_text_field($_POST['order_item_domain_name'][$item_id]);
         $item->update_meta_data('domain_name', $domain);
     }
 }, 10, 2);
 
-// Template override
+// Template override this also may not be needed
 add_filter('woocommerce_locate_template', function ($template, $template_name, $template_path) {
     $plugin_path = plugin_dir_path(__FILE__) . 'templates/';
 

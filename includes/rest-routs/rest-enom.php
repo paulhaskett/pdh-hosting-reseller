@@ -75,6 +75,8 @@ function get_name_suggestions_callback(WP_REST_REQUEST $request)
     }
 }
 
+
+
 function pdh_ensure_woocommerce_cart()
 {
     // If WooCommerce core is not active, bail.
@@ -108,11 +110,11 @@ function pdh_ensure_woocommerce_cart()
 
 function pdh_rest_add_domain_to_cart_callback(WP_REST_Request $request)
 {
-    error_log('=== REST ADD TO CART CALLED ===');
+    error_log('=== REST ADD TO CART REST CALLED ===');
 
     // Basic nonce check from localized JS
-    $nonce = $request->get_header('X-WP-Nonce') ?? '';
-    if (! wp_verify_nonce($nonce, 'wp_rest')) {
+    $token = $request->get_header('X-WP-Nonce') ?? '';
+    if (! wp_verify_nonce($token, 'wp_rest')) {
         return new WP_REST_Response(['error' => 'Invalid token'], 403);
     }
 

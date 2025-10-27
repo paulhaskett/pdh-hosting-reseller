@@ -168,7 +168,7 @@ function populateProductFormOnPage(domain, tld, pricePerYear) {
   updatePriceOnProductPage(1, pricePerYear);
 
   // Listen for years dropdown changes
-  const yearsSelect = document.getElementById('domain_years');
+  const yearsSelect = document.getElementById('domain-years-selector');
   console.log('Years select element:', yearsSelect);
   if (yearsSelect) {
     // Remove any existing listeners by cloning

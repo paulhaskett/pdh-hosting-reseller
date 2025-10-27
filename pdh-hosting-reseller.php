@@ -10,7 +10,7 @@
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       pdh-hosting-reseller
- * Requires Plugins:  woocommerce
+ * Requires Plugins:  woocommerce + stripe
  *
  * @package PdhHostingReseller
  */
@@ -85,6 +85,8 @@ add_action('plugins_loaded', function () {
 	require_once plugin_dir_path(__FILE__) . 'includes/hooks-domain-pricing.php';
 	//require_once plugin_dir_path(__FILE__) . 'includes/domain-fields.php';
 	require_once plugin_dir_path(__FILE__) . 'includes/class-hestiacp-api.php';
+	require_once plugin_dir_path(__FILE__) . 'includes/hooks-checkout-requirements.php';
+	//require_once plugin_dir_path(__FILE__) . 'includes/hooks-pdh-uk-fields.php';
 
 
 
@@ -183,6 +185,7 @@ add_action('wp_footer', function () {
 			const params = new URLSearchParams(window.location.search);
 			const domainName = params.get('domain_name');
 			const domainTld = params.get('domain_tld');
+
 			const pricePerYear = params.get('price') || params.get('domain_registration_price');
 
 			console.log('URL Params:', {
@@ -192,11 +195,11 @@ add_action('wp_footer', function () {
 			});
 
 			// If domain name was passed in URL, fill in the form
-			if (domainName) {
+			if (domainName && domainTld) {
 				// Fill in the visible domain name input field
 				const domainInput = document.getElementById('domain_name');
 				if (domainInput) {
-					domainInput.value = domainName;
+					domainInput.value = domainName + '.' + domainTld;
 
 					// Make it readonly since user already searched for it
 					domainInput.setAttribute('readonly', 'readonly');
@@ -223,6 +226,7 @@ add_action('wp_footer', function () {
 					// Create or update hidden field for domain_name
 					ensureHiddenField(productForm, 'domain_name', domainName);
 
+
 					// Create or update hidden field for domain_tld
 					if (domainTld) {
 						ensureHiddenField(productForm, 'domain_tld', domainTld);
@@ -237,7 +241,7 @@ add_action('wp_footer', function () {
 						updatePriceForYears(1);
 
 						// Listen for changes to the years dropdown
-						const yearsSelect = document.getElementById('domain_years');
+						const yearsSelect = document.getElementById('domain-years-selector');
 						console.log('Years select element:', yearsSelect);
 
 						if (yearsSelect) {
@@ -263,7 +267,7 @@ add_action('wp_footer', function () {
 								if (yearsSelect) {
 									console.log('Found domain_years after delay, setting up listener');
 									yearsSelect.addEventListener('change', function() {
-										const years = parseInt(this.value) || 1;
+										//const years = parseInt(this.value) || 1;
 										console.log('Years changed to:', years);
 										updatePriceForYears(years);
 									});
@@ -271,6 +275,8 @@ add_action('wp_footer', function () {
 							}, 500);
 						}
 					}
+
+
 				} else {
 					console.warn('Product form not found');
 				}
@@ -527,3 +533,9 @@ function pdh_reset_domain_product_price($order_id)
 		}
 	}
 }
+
+// Make phone required for ALL orders
+add_filter('woocommerce_billing_fields', function ($fields) {
+	$fields['billing_phone']['required'] = true;
+	return $fields;
+});
