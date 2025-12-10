@@ -83,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
 						// We're on the product page - fill in the form and update price
 						console.log('On product page - filling form')
 						populateProductFormOnPage(domain, tld, regPrice)
+						//checkForUKDomain()
 
 						// Show success message
 						resultDiv.innerHTML = `<p style="color: green; font-weight: bold;">✅ ${result.Domain.Name} is available! Price: ${DomainWidget.currencySymbol}${regPrice}/year</p>`
@@ -123,13 +124,51 @@ document.addEventListener('DOMContentLoaded', () => {
 						const suggestions = suggData['DomainSuggestions'] || []
 
 						resultDiv.textContent = `❌ Domain ${result.Domain.Name} is taken.`
+						// clear the input if domain not available when searching from single product
+
+						resetDomain = ""
+						resetTld = ""
+						resetPrice = 0
+						populateProductFormOnPage(resetDomain, resetTld, resetPrice)
+
+						console.log('domain input trying to clear ', resetDomain, resetPrice)
 
 						if (suggestions['Domain'] && suggestions['Domain'].length > 0) {
 							const suggestionsDiv = document.createElement('div')
 							suggestionsDiv.className = 'domain-suggestions'
-							suggestionsDiv.innerHTML = '<div class="domain-suggestions"><strong>Suggestions:</strong><ul class="domain-name-suggestions">' +
-								suggestions['Domain'].map(s => `<li>${s}</li>`).join('') +
-								'</ul></div>'
+
+							const title = document.createElement('strong')
+							title.textContent = 'Suggestions:'
+							suggestionsDiv.appendChild(title)
+
+							const ul = document.createElement('ul')
+							ul.className = 'domain-name-suggestions'
+
+							suggestions['Domain'].forEach(s => {
+								const li = document.createElement('li')
+								li.textContent = s + ' '
+
+								const button = document.createElement('button')
+								button.type = 'button'
+								button.textContent = 'Configure'
+								button.className = 'button'
+
+								button.addEventListener('click', () => {
+
+									const parts = s.split('.', 2)// split into two parts at first dot
+									domainInput.value = parts[0] // "example"
+									tldSelect.value = parts[1]        // "co.uk"
+									console.log(parts[0], parts[1])
+									// submit the form programmatically
+									form.requestSubmit()
+
+								})
+
+								li.appendChild(button)
+								ul.appendChild(li)
+							})
+
+							suggestionsDiv.appendChild(ul)
 							resultDiv.appendChild(suggestionsDiv)
 						}
 					} catch (err) {
@@ -144,6 +183,28 @@ document.addEventListener('DOMContentLoaded', () => {
 	})
 })
 
+// Show/hide UK fields based on TLD
+function checkForUKDomain() {
+	const domainName = document.getElementById('domain_name')
+	const ukTlds = ['.uk', '.co.uk', '.org.uk', '.me.uk', '.ltd.uk', '.plc.uk']
+	const isUK = false
+
+	ukTlds.forEach(function (tld) {
+		if (domainName && domainName.toLowerCase().endsWith(tld)) {
+			isUK = true
+		}
+	})
+
+	if (isUK) {
+		document.getElementById('uk-legal-fields').slideDown()
+		document.getElementById('domain_uk_registrant_type').attr('required', true)
+	} else {
+		document.getElementById('uk-legal-fields').slideUp()
+		document.getElementById('domain_uk_registrant_type').removeAttr('required')
+	}
+}
+
+
 /**
  * When on product page, fill form and set up price updates
  */
@@ -153,7 +214,14 @@ function populateProductFormOnPage(domain, tld, pricePerYear) {
 	// Fill in the domain_name field
 	const domainNameInput = document.getElementById('domain_name')
 	if (domainNameInput) {
-		domainNameInput.value = domain + '.' + tld
+		if (domain && tld) {
+			domainNameInput.value = domain + '.' + tld
+		}
+		else {
+			domainNameInput.value = "Please search a different domain"
+			resetPriceOnProductPage()
+		}
+
 		domainNameInput.setAttribute('readonly', 'readonly')
 		domainNameInput.style.backgroundColor = '#f5f5f5'
 		console.log('Set domain_name to:', domain + '.' + tld)
@@ -208,7 +276,8 @@ function populateProductFormOnPage(domain, tld, pricePerYear) {
  * Update price and hidden field when years change
  */
 function updatePriceOnProductPage(years, pricePerYear) {
-	if (!pricePerYear || years < 1) return
+	if (!pricePerYear || years < 0) return
+	if (pricePerYear === 0) updateDisplayedPrice(0, 1, 0)
 
 	const totalPrice = pricePerYear * years
 	console.log('updatePriceOnProductPage:', { years, pricePerYear, totalPrice })
@@ -227,7 +296,7 @@ function updatePriceOnProductPage(years, pricePerYear) {
  * Update the displayed price on the page
  */
 function updateDisplayedPrice(totalPrice, years, pricePerYear) {
-	if (isNaN(totalPrice) || totalPrice <= 0) return
+	if (isNaN(totalPrice) || totalPrice < 0) return
 
 	const formatted = totalPrice.toFixed(2)
 	const symbol = (window.DomainWidget && window.DomainWidget.currencySymbol)
@@ -261,6 +330,36 @@ function updateDisplayedPrice(totalPrice, years, pricePerYear) {
 }
 
 /**
+ * Reset price to default (0 or original product price)
+ */
+function resetPriceOnProductPage() {
+	const symbol = (window.DomainWidget && window.DomainWidget.currencySymbol)
+		? window.DomainWidget.currencySymbol
+		: '£'
+
+	console.log('Resetting price to default')
+
+	// Reset to 0 or "From £X.XX"
+	const defaultPrice = '0.00'
+
+	// Update all price display elements
+	document.querySelectorAll('.woocommerce-Price-amount.amount').forEach(function (el) {
+		el.innerHTML = '<bdi><span class="woocommerce-Price-currencySymbol">' + symbol + '</span>' + defaultPrice + '</bdi>'
+	})
+
+	// Also update .price elements
+	document.querySelectorAll('.price').forEach(function (priceEl) {
+		const priceAmount = priceEl.querySelector('.woocommerce-Price-amount')
+		if (priceAmount) {
+			priceAmount.innerHTML = '<bdi><span class="woocommerce-Price-currencySymbol">' + symbol + '</span>' + defaultPrice + '</bdi>'
+		}
+	})
+
+	// Clear stored price
+	window.domainPricePerYear = null
+}
+
+/**
  * Ensure a hidden input field exists with the correct value
  */
 function ensureHiddenField(form, name, value) {
@@ -284,3 +383,4 @@ function ensureHiddenField(form, name, value) {
 
 	console.log('Set ' + name + ' = ' + value)
 }
+

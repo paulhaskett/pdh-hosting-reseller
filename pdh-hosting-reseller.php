@@ -185,6 +185,13 @@ add_action('wp_footer', function () {
 			const params = new URLSearchParams(window.location.search);
 			const domainName = params.get('domain_name');
 			const domainTld = params.get('domain_tld');
+			const domainInput = document.getElementById('domain_name');
+			if (domainInput) {
+
+				domainInput.style.cursor = 'not-allowed';
+				domainInput.setAttribute('required', 'required');
+			}
+
 
 			const pricePerYear = params.get('price') || params.get('domain_registration_price');
 
@@ -197,12 +204,12 @@ add_action('wp_footer', function () {
 			// If domain name was passed in URL, fill in the form
 			if (domainName && domainTld) {
 				// Fill in the visible domain name input field
-				const domainInput = document.getElementById('domain_name');
+
 				if (domainInput) {
 					domainInput.value = domainName + '.' + domainTld;
 
 					// Make it readonly since user already searched for it
-					domainInput.setAttribute('readonly', 'readonly');
+
 					domainInput.style.backgroundColor = '#f5f5f5';
 					domainInput.style.cursor = 'not-allowed';
 
@@ -246,6 +253,7 @@ add_action('wp_footer', function () {
 
 						if (yearsSelect) {
 							console.log('Setting up change listener for years dropdown');
+							yearsSelect.setAttribute('required', 'required');
 							yearsSelect.addEventListener('change', function() {
 								const years = parseInt(this.value) || 1;
 								console.log('Years changed to:', years);
@@ -387,6 +395,7 @@ add_action('wp_footer', function () {
 			}
 		});
 	</script>
+
 <?php
 });
 

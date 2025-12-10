@@ -36,6 +36,7 @@ add_action('woocommerce_before_add_to_cart_button', function () {
             'type' => 'select',
             'required' => true,
             'label' => __('Registrant Type', 'pdh-hosting-reseller'),
+            'default'     => '',
             'class' => ['form-row-wide'],
             'options' => [
                 '' => __('Select registrant type', 'pdh-hosting-reseller'),
@@ -56,6 +57,9 @@ add_action('woocommerce_before_add_to_cart_button', function () {
                 'FCORP' => __('Non-UK Corporation', 'pdh-hosting-reseller'),
                 'FOTHER' => __('Non-UK Entity', 'pdh-hosting-reseller'),
             ],
+            'custom_attributes' => [
+                'required' => 'required',
+            ],
         ]);
 
         // Company Registration Number (for companies)
@@ -66,6 +70,14 @@ add_action('woocommerce_before_add_to_cart_button', function () {
             'class' => ['form-row-wide', 'uk-company-field'],
             'input_class' => ['input-text'],
             'description' => __('Required for UK Limited Companies, PLCs, LLPs', 'pdh-hosting-reseller'),
+            'custom_attributes' => [
+                'pattern'     => '^(?:\\d{8}|(SC|NI|SL|OC|SE|IP|RC)\\d{6})$',
+                'title'       => 'Enter a valid UK company number (8 digits or prefix like SC, NI, OC, etc., followed by 6 digits)',
+                'maxlength'   => '8',
+                'style'       => 'text-transform:uppercase;',
+
+            ],
+
         ]);
 
         // Trading Name (optional)
@@ -78,7 +90,61 @@ add_action('woocommerce_before_add_to_cart_button', function () {
         ]);
         ?>
     </div>
+    <style>
+        .uk-legal-fields {
+            margin-top: 20px;
+            padding: 20px;
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            width: 100%;
+        }
 
+        .uk-legal-fields h4 {
+            margin-top: 0;
+        }
+
+        .uk-legal-fields p {
+            font-size: 0.9em;
+            color: #856404;
+            margin-bottom: 1em;
+        }
+
+        .uk-legal-fields .form-row {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 1.5em;
+        }
+
+        .uk-legal-fields .form-row.uk-company-field .woocommerce-error {
+            display: block;
+            margin-top: 0.25em;
+            color: #d63638;
+            font-size: 0.875em;
+        }
+
+        .uk-legal-fields .form-row .description {
+            display: block;
+            margin-top: 1.5em;
+            font-size: 0.75em;
+            color: #6c757d;
+        }
+
+        .uk-legal-fields .form-row label {
+            font-weight: 600;
+            margin-bottom: 0.25em;
+        }
+
+        .uk-legal-fields .form-row label .required {
+            color: #d63638;
+        }
+
+        .uk-legal-fields .form-row label .optional {
+            font-weight: normal;
+            font-size: 0.85em;
+            color: #6c757d;
+        }
+    </style>
     <script>
         jQuery(document).ready(function($) {
             // Show/hide UK fields based on TLD
@@ -105,6 +171,17 @@ add_action('woocommerce_before_add_to_cart_button', function () {
             // Check on page load and on domain name change
             $('#domain_name').on('change keyup blur', checkForUKDomain);
             checkForUKDomain();
+
+            // listen if domain_name changes
+            let lastVal = $('#domain_name').val();
+
+            setInterval(function() {
+                const newVal = $('#domain_name').val();
+                if (newVal !== lastVal) {
+                    lastVal = newVal;
+                    checkForUKDomain();
+                }
+            }, 300);
 
             // Show/hide company number field based on registrant type
             $('#domain_uk_registrant_type').on('change', function() {

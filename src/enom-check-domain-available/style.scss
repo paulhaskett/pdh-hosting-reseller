@@ -1,79 +1,98 @@
-/**
- * The following styles get applied both on the front of your site
- * and in the editor.
- *
- * Replace them with your own styles or remove the file completely.
- */
-
-
-
 .wp-block-pdh-hosting-reseller-enom-check-domain-available {
 	padding: 5px;
 
-
-}
-
-.domain-search {
-	align-items: center;
-
-	padding: 10px;
-
-	form.domain-search-form {
-
-		border: 2px solid #4c2639;
-		padding: 15px;
-
-
-		border-radius: 10px;
-		line-height: 1.6em;
-		font-size: 1.5em;
-
-		align-content: center;
-
+	.domain-search {
+		display: flex;
+		flex-direction: column;
 		align-items: center;
+		padding: 10px;
 
-		input {
+		form.domain-search-form {
 			width: 100%;
-			padding: 12px;
-			margin: 8px 0;
-			box-sizing: border-box;
-			border: 3px solid #ccc;
-			border-radius: 20px;
-			transition: 0.5s;
-			outline: none;
+			padding: 15px;
+			border-radius: 10px;
+			line-height: 1.6em;
+			font-size: 1.5em;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
 
-			&:focus {
-				border: 3px solid #555;
+			input {
+				width: 100%;
+				padding: 12px;
+				margin: 8px 0;
+				box-sizing: border-box;
+				border: 3px solid #ccc;
+				border-radius: 20px;
+				transition: 0.5s;
+				outline: none;
+
+				&:focus {
+					border: 3px solid #555;
+				}
 			}
+
+			button {
+				margin: 10px;
+				padding: 10px 20px;
+				background-color: grey;
+				color: #fff;
+				border: none;
+				border-radius: 6px;
+				cursor: pointer;
+				transition: background-color 0.3s;
+
+				&:hover {
+					background-color: black;
+				}
+			}
+
+
 		}
 
-		button {
-			margin: 10px;
-			background-color: grey;
+		.domain-suggestions {
+			width: 100%;
+			margin-top: 15px;
 
-			&:hover {
-				background-color: black;
+			ul.domain-name-suggestions {
+				list-style: none;
+				padding: 0;
+				display: flex;
+				flex-wrap: wrap;
+				justify-content: center;
+				gap: 10px;
+
+				li {
+					font-size: small;
+					text-align: center;
+					padding: 10px 15px;
+					background: #fff;
+					border: 1px solid #e0e0e0;
+					border-radius: 6px;
+					cursor: pointer;
+					transition: background 0.3s, border-color 0.3s;
+
+					&:hover {
+						background: #f5f5f5;
+						border-color: #ccc;
+					}
+
+					button {
+						margin-top: 5px;
+						padding: 5px 10px;
+						font-size: 0.85em;
+						border: none;
+						border-radius: 4px;
+						background: grey;
+						color: #fff;
+						cursor: pointer;
+
+						&:hover {
+							background: black;
+						}
+					}
+				}
 			}
-		}
-	}
-
-	.domain-suggestions ul.domain-name-suggestions {
-		list-style-type: none;
-		width: 100%;
-		padding: 0%;
-
-		li {
-			list-style: none;
-			font-size: small;
-			align-content: center;
-			text-align: center;
-
-			margin-right: 10px;
-			margin-bottom: 10px;
-			padding: 10px 15px;
-			background: #fff;
-			border: 1px solid #e0e0e0;
-			border-radius: 6px;
 		}
 	}
 }

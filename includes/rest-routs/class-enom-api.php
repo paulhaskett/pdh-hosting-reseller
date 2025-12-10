@@ -212,6 +212,10 @@ class PDH_Enom_API
         }
         if (!empty($contact['uk_reg_opt_out'])) {
             $sanitized['uk_reg_opt_out'] = sanitize_text_field($contact['uk_reg_opt_out']);
+            if (!$this->validate_uk_company_number($sanitized)) {
+                wc_add_notice(__('Invalid UK company registration number.', 'pdh-hosting-reseller'), 'error');
+                return;
+            }
         }
 
         return $sanitized;
@@ -304,5 +308,10 @@ class PDH_Enom_API
         return $this->request('GetExtAttributes', [
             'TLD' => $tld
         ]);
+    }
+    private function validate_uk_company_number($number)
+    {
+        $number = strtoupper(trim($number));
+        return preg_match('/^(?:\d{8}|(SC|NI|SL|OC|SE|IP|RC)\d{6})$/', $number);
     }
 }
